@@ -41,7 +41,19 @@ class HttpOperationTest {
                 }
             }
         });
+        server.createContext("/created", exchange -> respondWithStatus(exchange, 201, "{\"id\":1}"));
+        server.createContext("/not-found", exchange -> respondWithStatus(exchange, 404, "{\"error\":\"no such resource\"}"));
+        server.createContext("/server-error", exchange -> respondWithStatus(exchange, 500, "{\"error\":\"boom\"}"));
         server.start();
+    }
+
+    private void respondWithStatus(com.sun.net.httpserver.HttpExchange exchange, int status, String body) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.sendResponseHeaders(status, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
     }
 
     @AfterEach
@@ -93,5 +105,50 @@ class HttpOperationTest {
         operation.run(Payload.empty());
 
         assertThat(capturedContentType.get()).isNull();
+    }
+
+    /**
+     * Success must be determined by the HTTP response, not merely by "we got a
+     * parseable body back" — a 404/500 with a valid JSON error body used to be
+     * reported as a successful step.
+     */
+    @Test
+    void a2xxResponseIsReportedAsSuccess() {
+        HttpTemplateConfig config = new HttpTemplateConfig(
+                HttpMethod.POST, "http://localhost:" + port + "/created", List.of(), null);
+        HttpOperation operation = new HttpOperation(config, new JmesPathExpressionResolver(),
+                HttpClient.newHttpClient(), objectMapper);
+
+        OperationResult result = operation.run(Payload.empty());
+
+        assertThat(result.success()).isTrue();
+        assertThat(result.payload().value().get("id").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void a404ResponseIsReportedAsFailureNotSuccess() {
+        HttpTemplateConfig config = new HttpTemplateConfig(
+                HttpMethod.GET, "http://localhost:" + port + "/not-found", List.of(), null);
+        HttpOperation operation = new HttpOperation(config, new JmesPathExpressionResolver(),
+                HttpClient.newHttpClient(), objectMapper);
+
+        OperationResult result = operation.run(Payload.empty());
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.payload()).isNull();
+        assertThat(result.error()).contains("404").contains("no such resource");
+    }
+
+    @Test
+    void a500ResponseIsReportedAsFailure() {
+        HttpTemplateConfig config = new HttpTemplateConfig(
+                HttpMethod.GET, "http://localhost:" + port + "/server-error", List.of(), null);
+        HttpOperation operation = new HttpOperation(config, new JmesPathExpressionResolver(),
+                HttpClient.newHttpClient(), objectMapper);
+
+        OperationResult result = operation.run(Payload.empty());
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.error()).contains("500");
     }
 }

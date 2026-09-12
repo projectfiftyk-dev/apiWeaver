@@ -22,6 +22,11 @@ Added `docs/postman/apiWeaver.postman_collection.json` + `.postman_environment.j
 
 Building it against a real running instance surfaced an actual bug: `HttpOperation` never set `Content-Type` when sending a body, so real APIs (jsonplaceholder included) silently ignored the payload and echoed only a fake id. Fixed in [HttpOperation.java](services/api-core/src/main/java/com/projfiftyk/apicore/engine/http/HttpOperation.java) — defaults to `application/json` when a body is present and no header already sets it, verified against the same public API, and covered by a new [HttpOperationTest](services/api-core/src/test/java/com/projfiftyk/apicore/engine/http/HttpOperationTest.java) (52 tests total now).
 
+## 2026-09-12 (HTTP status now gates success)
+Fixed a real correctness bug: `HttpOperation` reported success on any response it could parse as JSON, so a 404/500 with a well-formed JSON error body was reported as a successful step. `execute()` now checks the status code and throws (converted by `AbstractOperation`'s existing catch-all into `OperationResult.failure(...)`) for anything outside 2xx — a 404 no longer masquerades as "operation was fine". Documented in [architecture.md](../architecture/architecture.md) §6 and the decisions log.
+
+Covered by a new [HttpOperationTest](services/api-core/src/test/java/com/projfiftyk/apicore/engine/http/HttpOperationTest.java) status-code suite and a new behavior spec, [HttpOperationStatusBehaviorTest](services/api-core/src/test/java/com/projfiftyk/apicore/behavior/HttpOperationStatusBehaviorTest.java). 59 tests total, all passing.
+
 <!-- Newest entries go here. Example:
 
 ## 2026-09-13

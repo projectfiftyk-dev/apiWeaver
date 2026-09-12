@@ -87,6 +87,8 @@ Operation.run(payload):
 
 Deferred on purpose: a `metadata` slot for things like HTTP status codes and response headers. Adding it later is purely additive.
 
+For `HttpOperation` specifically, `success` is determined by the HTTP response status: any 2xx is success, anything else (4xx, 5xx) is `success == false` with `error` describing the status and body — a well-formed JSON error body from a 404 must never be reported as a successful step just because it parsed.
+
 ## 7. Templates
 
 A Template is fixed at authoring time, with placeholders for whatever can only be known once a real Payload arrives. Every value inside one is either a literal, or a string containing one or more `{{expression}}` placeholders resolved against the current Payload via **JMESPath**.
@@ -227,6 +229,7 @@ The Engine already produces this internally; returning it costs nothing and is e
 | Engine keeps an explicit seed input | Decided | not hardcoded `null` internally — a real parameter, which happens to start as `null`/empty for the first tests |
 | Query-param secrets | Open | header-level secrets are designed; query-level isn't yet |
 | `OperationResult.metadata` (HTTP status / headers) | Deferred | conscious punt — purely additive when it's added |
+| `HttpOperation` success gated on HTTP status | Decided | 2xx only; a parseable 4xx/5xx body is still a failure, not success — fixed after the initial implementation reported any parseable response as successful regardless of status |
 | FastAPI / LLM planner in the MVP | Decided | deferred entirely — MVP is Spring Boot + React only |
 | Zero-Spring-dependency rule on the core package | Decided | enforce with ArchUnit once the project exists |
 | Chain builder UI: reorderable list vs. visual graph | Decided | list for MVP; graph builder is a fast-follow |

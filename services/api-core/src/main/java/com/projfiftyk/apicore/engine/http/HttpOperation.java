@@ -71,7 +71,18 @@ public class HttpOperation extends AbstractOperation<HttpOperation.BoundRequest,
 
         builder.method(config.method().name(), bodyPublisher);
 
-        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+
+        if (!isSuccessful(response.statusCode())) {
+            throw new IllegalStateException(
+                    "HTTP request failed with status " + response.statusCode() + ": " + response.body());
+        }
+
+        return response;
+    }
+
+    private boolean isSuccessful(int statusCode) {
+        return statusCode >= 200 && statusCode < 300;
     }
 
     @Override
