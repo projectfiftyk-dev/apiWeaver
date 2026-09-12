@@ -1,0 +1,502 @@
+{
+  "info": {
+    "name": "apiWeaver — core-api",
+    "description": "Exercises every endpoint of services/api-core (see docs/architecture/architecture.md): HttpTemplate CRUD, Chain CRUD, and the run endpoint. The two \"Create HTTP Template\" requests and the \"Run Chain\" request together reproduce the GET -> POST worked example from architecture.md §7, against the public jsonplaceholder.typicode.com test API, so the collection is runnable end to end with no setup beyond having core-api running locally.\n\nSuggested order: run top to bottom (or use Collection Runner) — later requests read ids captured by earlier ones via collection variables (getTemplateId, postTemplateId, chainId).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "getTemplateId", "value": "", "type": "string" },
+    { "key": "postTemplateId", "value": "", "type": "string" },
+    { "key": "chainId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "HTTP Templates",
+      "item": [
+        {
+          "name": "Create HTTP Template — Get Todo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('has an id', () => pm.expect(body.id).to.be.a('number'));",
+                  "pm.collectionVariables.set('getTemplateId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Get todo\",\n  \"description\": \"Fetches a single todo item — first step of the GET -> POST worked example from architecture.md §7\",\n  \"method\": \"GET\",\n  \"urlTemplate\": \"https://jsonplaceholder.typicode.com/todos/1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/http-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create HTTP Template — Create Todo (POST, templated body)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('postTemplateId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Create todo\",\n  \"description\": \"Second step: {{title}}/{{completed}}/{{userId}} are JMESPath expressions resolved against the previous step's response payload\",\n  \"method\": \"POST\",\n  \"urlTemplate\": \"https://jsonplaceholder.typicode.com/todos\",\n  \"headerTemplate\": [\n    { \"name\": \"X-Requested-By\", \"value\": \"apiWeaver\", \"secret\": false }\n  ],\n  \"bodyTemplate\": {\n    \"title\": \"{{title}}\",\n    \"completed\": \"{{completed}}\",\n    \"userId\": \"{{userId}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/http-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List HTTP Templates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/http-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get HTTP Template By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('id matches the requested template', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('getTemplateId'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/http-templates/{{getTemplateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates", "{{getTemplateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update HTTP Template",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('version incremented to 2', () => pm.expect(pm.response.json().version).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Get todo\",\n  \"description\": \"Updated description — every update bumps the version field\",\n  \"method\": \"GET\",\n  \"urlTemplate\": \"https://jsonplaceholder.typicode.com/todos/1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/http-templates/{{getTemplateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates", "{{getTemplateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get HTTP Template By Id — 404 example",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('body carries a message', () => pm.expect(pm.response.json().message).to.include('not found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/http-templates/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates", "999999"]
+            }
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/http-templates/999999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["http-templates", "999999"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"HttpTemplate not found: 999999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create HTTP Template — 400 validation example",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"method\": \"GET\",\n  \"urlTemplate\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/http-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chains",
+      "item": [
+        {
+          "name": "Create Chain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('has two steps', () => pm.expect(body.steps).to.have.lengthOf(2));",
+                  "pm.collectionVariables.set('chainId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fetch todo then create todo\",\n  \"description\": \"The GET -> POST worked example from architecture.md §7\",\n  \"steps\": [\n    { \"templateId\": {{getTemplateId}}, \"order\": 0 },\n    { \"templateId\": {{postTemplateId}}, \"order\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chains",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Chains",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chains",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Chain By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chains/{{chainId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains", "{{chainId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Chain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fetch todo then create todo (renamed)\",\n  \"description\": \"Updated description\",\n  \"steps\": [\n    { \"templateId\": {{getTemplateId}}, \"order\": 0 },\n    { \"templateId\": {{postTemplateId}}, \"order\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chains/{{chainId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains", "{{chainId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Run Chain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('both steps succeeded', () => body.steps.forEach(s => pm.expect(s.success).to.be.true));",
+                  "pm.test('finalPayload echoes the fields resolved from the GET step', () => pm.expect(body.finalPayload).to.have.property('title'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chains/{{chainId}}/run",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains", "{{chainId}}", "run"]
+            },
+            "description": "Runs the Engine end to end: GET the todo, then POST a new todo whose title/completed/userId fields are {{expr}} placeholders resolved against the GET step's response payload. The response is the full per-step trace, not just the final payload — see architecture.md §11."
+          },
+          "response": [
+            {
+              "name": "200 OK — full trace",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/chains/{{chainId}}/run",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["chains", "{{chainId}}", "run"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"chainId\": 1,\n  \"steps\": [\n    {\n      \"templateId\": 1,\n      \"success\": true,\n      \"payload\": { \"userId\": 1, \"id\": 1, \"title\": \"delectus aut autem\", \"completed\": false },\n      \"error\": null\n    },\n    {\n      \"templateId\": 2,\n      \"success\": true,\n      \"payload\": { \"title\": \"delectus aut autem\", \"completed\": \"false\", \"userId\": \"1\", \"id\": 201 },\n      \"error\": null\n    }\n  ],\n  \"finalPayload\": { \"title\": \"delectus aut autem\", \"completed\": \"false\", \"userId\": \"1\", \"id\": 201 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run Chain — 404 example",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chains/999999/run",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains", "999999", "run"]
+            }
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/chains/999999/run",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["chains", "999999", "run"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"Chain not found: 999999\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Chain",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/chains/{{chainId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chains", "{{chainId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete HTTP Template — Get Todo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/http-templates/{{getTemplateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates", "{{getTemplateId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete HTTP Template — Create Todo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/http-templates/{{postTemplateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["http-templates", "{{postTemplateId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
