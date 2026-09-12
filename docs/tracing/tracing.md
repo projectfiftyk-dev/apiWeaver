@@ -6,6 +6,13 @@ A running log of what's being worked on, kept short on purpose.
 
 ---
 
+## 2026-09-12 (UI scaffold)
+Scaffolded `ui/` — a minimal React + TypeScript + Vite frontend for `api-core`, no UI framework, custom CSS (neutral palette, single accent color). [api/types.ts](../../ui/src/api/types.ts) and [api/client.ts](../../ui/src/api/client.ts) mirror the backend's DTOs and endpoints exactly, including the details that aren't obvious from the shape alone: `headerTemplate[].value` comes back masked to `null` when `secret: true`, and `ChainRunResponse.steps` stops at the first failing step rather than listing all of them. Pages: template list/create/edit (dynamic header rows, JSON textareas for `bodyTemplate`/`declaredOutput` with inline parse-error validation) and chain list/create/edit, plus a **Run** action on each chain rendering a per-step success/failure breakdown and the final payload.
+
+Backend had no CORS configuration at all, so the dev server (`localhost:5173`) couldn't call `localhost:8080` — added [CorsConfig.java](../../services/api-core/src/main/java/com/projfiftyk/apicore/config/CorsConfig.java), scoped to the Vite dev/preview ports only (no auth exists yet, so keeping this narrow rather than wide open).
+
+Verified for real, not just typechecked: `npm install` surfaced a `@vitejs/plugin-react`/`vite@8` peer-dependency conflict (fixed by bumping the plugin to `^6.1.1`), `npm run build` (tsc + vite) passes clean, and a live run against the actual backend confirmed CORS headers, template CRUD, and — most importantly — a chain run correctly piping step 1's JSON response into step 2's `{{expression}}` placeholders via JMESPath, rendered in the run panel exactly as the engine produces it.
+
 ## 2026-09-12 (test suite)
 Filled out the test pyramid for `services/api-core`, split by purpose:
 - **Unit tests** (`services/`, `domain/common/`) — `HttpTemplateServiceImplTest`, `ChainServiceImplTest`, `ChainExecutionServiceImplTest`, `HttpTemplateEngineMapperTest`, `JsonConvertersTest` (the JSON `AttributeConverter`s round-tripped directly, no Spring context). All Mockito-based, no Spring context, run in milliseconds.
